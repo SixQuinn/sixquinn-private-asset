@@ -41,7 +41,7 @@ input {
   color: #e5e7eb;
   padding: 8px 10px;
   font-size: 17px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 button {
@@ -78,15 +78,13 @@ button:active { opacity: 0.7; }
 
 canvas { background: #020617; border-radius: 14px; margin-top: 16px; padding: 10px; }
 
-#loading span {
-  font-size: 48px;
-  font-weight: bold;
-  animation: pulse 0.8s infinite alternate;
-}
+#loading canvas { width: 120px; height: 120px; }
 
-@keyframes pulse {
-  from { transform: scale(1); opacity: 1; }
-  to { transform: scale(1.2); opacity: 0.6; }
+#loading span {
+  position: absolute;
+  font-size: 36px;
+  font-weight: bold;
+  color: #38bdf8;
 }
 </style>
 </head>
@@ -102,8 +100,9 @@ canvas { background: #020617; border-radius: 14px; margin-top: 16px; padding: 10
 </div>
 
 <div id="loading" class="hidden">
-  <span id="countdown">3</span>
-  <p class="small">正在加载...</p>
+  <canvas id="circleCountdown" width="120" height="120"></canvas>
+  <span id="countNumber">3</span>
+  <p class="small" style="margin-top:16px;">正在加载...</p>
 </div>
 
 <div class="container hidden" id="app">
@@ -170,20 +169,51 @@ function unlock(){
  } else document.getElementById("pinHint").innerText="PIN 错误";
 }
 
+// 圆环倒计时
 function startLoading(){
   document.getElementById("lock").classList.add("hidden");
   const loading = document.getElementById("loading");
   loading.classList.remove("hidden");
-  let count = 3;
-  const cd = setInterval(()=>{
-    document.getElementById("countdown").innerText = count;
-    count--;
-    if(count<0){
-      clearInterval(cd);
+
+  const canvas = document.getElementById("circleCountdown");
+  const ctx = canvas.getContext("2d");
+  const numberSpan = document.getElementById("countNumber");
+
+  let totalTime = 3; // 秒
+  let start = null;
+
+  function drawCircle(progress){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const center = canvas.width/2;
+    const radius = center - 8;
+    ctx.lineWidth = 8;
+    // 背景圆
+    ctx.beginPath();
+    ctx.strokeStyle = '#334155';
+    ctx.arc(center, center, radius, 0, 2*Math.PI);
+    ctx.stroke();
+    // 前景圆
+    ctx.beginPath();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.arc(center, center, radius, -Math.PI/2, -Math.PI/2 + 2*Math.PI*progress);
+    ctx.stroke();
+  }
+
+  function step(timestamp){
+    if(!start) start = timestamp;
+    const elapsed = (timestamp - start)/1000; // 秒
+    let progress = Math.max(0, 1 - elapsed/totalTime);
+    drawCircle(progress);
+    let remaining = Math.ceil(totalTime - elapsed);
+    numberSpan.innerText = remaining>0 ? remaining : 0;
+    if(elapsed < totalTime){
+      requestAnimationFrame(step);
+    } else {
       loading.classList.add("hidden");
       openApp();
     }
-  }, 800);
+  }
+  requestAnimationFrame(step);
 }
 
 function openApp(){
@@ -192,25 +222,11 @@ function openApp(){
   updateTotals();
 }
 
-function save(){
- localStorage.setItem("assets",JSON.stringify(assets));
- updateTotals();
-}
-
-function addCustomAsset(){
- assets.push({name:"自定义资产",value:0,fixed:false});
- save();
- renderAssets();
-}
-
-function removeAsset(i){
- if(!assets[i].fixed){ assets.splice(i,1); save(); renderAssets(); }
-}
-
-function setVal(i,v){
- assets[i].value=parseFloat(v)||0;
- save();
-}
+// ------------------ 资产逻辑 ------------------
+function save(){ localStorage.setItem("assets",JSON.stringify(assets)); updateTotals(); }
+function addCustomAsset(){ assets.push({name:"自定义资产",value:0,fixed:false}); save(); renderAssets(); }
+function removeAsset(i){ if(!assets[i].fixed){ assets.splice(i,1); save(); renderAssets(); } }
+function setVal(i,v){ assets[i].value=parseFloat(v)||0; save(); }
 
 function renderAssets(){
   let html="";
@@ -240,13 +256,11 @@ function updateTotals(){
   document.getElementById("totalAll").innerText = totalAll.toFixed(2);
   document.getElementById("totalNoFundStock").innerText = totalNoFundStock.toFixed(2);
 
-  // 被裁风险 = 总资产（不含公积金）/ 199000 → 年月显示
   const riskYears = totalNoFundStock / 199000;
   const years = Math.floor(riskYears);
   const months = Math.floor((riskYears - years)*12);
   document.getElementById("risk").innerText = `可支撑 ${years} 年 ${months} 个月无收入生存`;
 
-  // 等级映射
   const levels = [
     {level:"A4",amount:1e3},{level:"A5",amount:1e4},{level:"A6",amount:1e5},{level:"A6.5",amount:5e5},
     {level:"A7",amount:1e6},{level:"A7.5",amount:5e6},{level:"A8",amount:1e7},{level:"A8.5",amount:5e7},
@@ -269,7 +283,6 @@ function updateTotals(){
   gapBar.style.width = gapPercent+"%";
   document.getElementById("levelGap").innerText = nextLevelAmount ? `距下一级：${(nextLevelAmount-totalAll).toFixed(2)}` : "";
 
-  // 资产结构建议
   let advice="结构稳健。";
   const stockValue = assets.filter(a=>["平安证券","东方财富"].includes(a.name)).reduce((sum,a)=>sum+a.value,0);
   if(totalAll>0){
@@ -283,12 +296,11 @@ function updateTotals(){
   renderChart();
 }
 
-// 饼图 + 百分比
 function renderChart(){
   const groupData = [
     assets.filter(a=>["支付宝","云闪付","美元外汇"].includes(a.name)).reduce((sum,a)=>sum+a.value,0),
     assets.filter(a=>["平安证券","东方财富"].includes(a.name)).reduce((sum,a)=>sum+a.value,0),
-    assets.filter(a=>["公积金"].includes(a.name)).reduce((sum,a)=>sum+a.value,0),
+    assets.filter(a=>["公积金"].includes(a.name)).reduce((sum,a=>sum+a.value,0),
     assets.filter(a=>["公司股票"].includes(a.name)).reduce((sum,a)=>sum+a.value,0)
   ];
   const total = groupData.reduce((a,b)=>a+b,0);
