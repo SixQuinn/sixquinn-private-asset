@@ -9,7 +9,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <style>
-/* 样式完全未改 */
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
@@ -103,6 +102,13 @@ button:active { opacity: 0.7; }
 }
 
 .hidden { display:none; }
+
+canvas {
+  background: #020617;
+  border-radius: 14px;
+  margin-top: 16px;
+  padding: 10px;
+}
 </style>
 </head>
 
@@ -123,6 +129,7 @@ button:active { opacity: 0.7; }
     <h2>💰 资产结构</h2>
     <div id="assets"></div>
     <button onclick="addCustomAsset()">＋ 新增自定义资产</button>
+    <canvas id="assetChart" width="400" height="400"></canvas>
   </div>
 
   <div class="card">
@@ -146,6 +153,7 @@ button:active { opacity: 0.7; }
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const PIN_KEY="SQ_PIN";
 
@@ -165,6 +173,8 @@ if(!assets){
  localStorage.setItem("assets",JSON.stringify(assets));
 }
 
+let assetChart;
+
 function unlock(){
  const v=document.getElementById("pin").value;
  if(!localStorage.getItem(PIN_KEY)){
@@ -177,21 +187,23 @@ function unlock(){
 function openApp(){
  document.getElementById("lock").style.display="none";
  document.getElementById("app").classList.remove("hidden");
- render();
+ renderAssets();
+ updateTotals();
 }
 
 function save(){
  localStorage.setItem("assets",JSON.stringify(assets));
- render();
+ updateTotals();
 }
 
 function addCustomAsset(){
  assets.push({name:"自定义资产",value:0,fixed:false});
  save();
+ renderAssets();
 }
 
 function removeAsset(i){
- if(!assets[i].fixed){ assets.splice(i,1); save(); }
+ if(!assets[i].fixed){ assets.splice(i,1); save(); renderAssets(); }
 }
 
 function setVal(i,v){
@@ -199,54 +211,96 @@ function setVal(i,v){
  save();
 }
 
-function render(){
- let html="",totalAll=0;
- let stock=0;
-
- assets.forEach(a=>{
-  totalAll+=a.value||0;
-  if(a.name==="东方财富" || a.name==="平安证券"){
-    stock+=a.value||0;
-  }
- });
-
- assets.forEach((a,i)=>{
-  const percent = totalAll>0 ? ((a.value||0)/totalAll*100).toFixed(2) : "0.00";
-
-  html+=`<div class="row">
-   <span>
-     ${a.name} ${a.fixed?"":"💡"}
-     <span class="small">（${percent}%）</span>
-   </span>
-   <span>
-    <input type="number" step="0.01" value="${Number(a.value).toFixed(2)}"
-     onchange="setVal(${i},this.value)">
-    ${a.fixed?"":"<button onclick='removeAsset("+i+")'>－</button>"}
-   </span>
-  </div>`;
- });
-
- document.getElementById("assets").innerHTML=html;
-
- /* ===== 资产结构建议（仅此处新增逻辑） ===== */
- let advice="结构稳健。";
-
- if(totalAll>0){
-  const stockPct = stock / totalAll;
-
-  if(stockPct >= 0.5){
-    advice="股票类资产占比超过 50%，结构波动性很高，需高度警惕市场回撤风险。";
-  }else if(stockPct >= 0.3){
-    advice="股票类资产占比超过 30%，已明显受股市影响，建议关注回撤与分散配置。";
-  }else if(stockPct >= 0.2){
-    advice="股票类资产占比超过 20%，需开始留意市场波动对整体资产的影响。";
-  }
- }
-
- document.getElementById("advice").innerText=advice;
+function renderAssets(){
+  // 生成资产输入框，只在初始化或新增自定义资产时调用
+  let html="";
+  assets.forEach((a,i)=>{
+    const percent = 0; // 不显示百分比，这里只是列表
+    html+=`<div class="row">
+      <span>
+        ${a.name} ${a.fixed?"":"💡"}
+      </span>
+      <span>
+        <input type="number" step="0.01" value="${Number(a.value).toFixed(2)}"
+          oninput="setVal(${i},this.value)">
+        ${a.fixed?"":"<button onclick='removeAsset(${i})'>－</button>"}
+      </span>
+    </div>`;
+  });
+  document.getElementById("assets").innerHTML = html;
 }
 
-render();
+function updateTotals(){
+  let totalAll=0, fund=0, stock=0;
+  assets.forEach(a=>{
+    totalAll += a.value||0;
+    if(a.name==="公积金") fund += a.value||0;
+    if(a.name==="东方财富" || a.name==="平安证券") stock += a.value||0;
+  });
+
+  const totalNoFund = totalAll - fund;
+  const totalNoFundStock = totalAll - fund - stock;
+
+  document.getElementById("totalAll").innerText = totalAll.toFixed(2);
+  document.getElementById("totalNoFund").innerText = totalNoFund.toFixed(2);
+  document.getElementById("totalNoFundStock").innerText = totalNoFundStock.toFixed(2);
+
+  // 被裁风险
+  const monthlyExpense = 20000;
+  const riskMonths = totalNoFundStock>0 ? Math.floor(totalNoFundStock / monthlyExpense) : 0;
+  document.getElementById("risk").innerText = `可支撑 ${riskMonths} 个月无收入生存`;
+
+  // 等级进度条
+  const level = Math.min(Math.floor(totalAll/100000),10);
+  document.getElementById("level").innerText = `等级：${level}`;
+  document.getElementById("levelBar").style.width = Math.min(totalAll/1000000*100,100) + "%";
+  document.getElementById("levelGap").innerText = `距下一级：${(100000*(level+1)-totalAll).toFixed(2)}`;
+
+  // 资产结构建议
+  let advice="结构稳健。";
+  if(totalAll>0){
+    const stockPct = stock/totalAll;
+    if(stockPct>=0.5) advice="股票类资产占比超过 50%，结构波动性很高，需高度警惕市场回撤风险。";
+    else if(stockPct>=0.3) advice="股票类资产占比超过 30%，已明显受股市影响，建议关注回撤与分散配置。";
+    else if(stockPct>=0.2) advice="股票类资产占比超过 20%，需开始留意市场波动对整体资产的影响。";
+  }
+  document.getElementById("advice").innerText = advice;
+
+  renderChart();
+}
+
+// ======= 饼图 =======
+function renderChart(){
+  const groupData = [
+    assets.filter(a=>["支付宝","云闪付","美元外汇"].includes(a.name)).reduce((sum,a)=>sum+a.value,0),
+    assets.filter(a=>["平安证券","东方财富"].includes(a.name)).reduce((sum,a)=>sum+a.value,0),
+    assets.filter(a=>["公积金"].includes(a.name)).reduce((sum,a)=>sum+a.value,0),
+    assets.filter(a=>["公司股票"].includes(a.name)).reduce((sum,a)=>sum+a.value,0)
+  ];
+  const ctx = document.getElementById("assetChart").getContext("2d");
+
+  if(assetChart) assetChart.destroy(); // 销毁旧图表
+
+  assetChart = new Chart(ctx,{
+    type: "pie",
+    data:{
+      labels:["现金类","股票类","公积金","公司股票"],
+      datasets:[{
+        data: groupData,
+        backgroundColor:["#38bdf8","#22c55e","#facc15","#f87171"]
+      }]
+    },
+    options:{
+      plugins:{
+        legend:{position:"bottom",labels:{color:"#e5e7eb"}},
+        tooltip:{callbacks:{label:function(context){
+          return context.label+": "+context.raw.toFixed(2);
+        }}}
+      }
+    }
+  });
+}
+
 </script>
 
 </body>
