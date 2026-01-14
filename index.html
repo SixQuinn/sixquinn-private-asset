@@ -61,31 +61,10 @@ button:active { opacity: 0.7; }
 
 .small { font-size: 14px; color: #94a3b8; }
 
-#lock, #loading {
-  position: fixed;
-  inset: 0;
-  background: #0f172a;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
-}
-
-#lock input, #lock button { margin-bottom: 16px; }
-
-.hidden { display: none; }
+#lock{ position: fixed; inset:0; background:#0f172a; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:999; }
+.hidden { display:none; }
 
 canvas { background: #020617; border-radius: 14px; margin-top: 16px; padding: 10px; }
-
-#loading canvas { width: 120px; height: 120px; }
-
-#loading span {
-  position: absolute;
-  font-size: 36px;
-  font-weight: bold;
-  color: #38bdf8;
-}
 </style>
 </head>
 
@@ -97,12 +76,6 @@ canvas { background: #020617; border-radius: 14px; margin-top: 16px; padding: 10
   <input id="pin" type="password" placeholder="输入 PIN">
   <button onclick="unlock()">解锁</button>
   <div id="pinHint" class="small"></div>
-</div>
-
-<div id="loading" class="hidden">
-  <canvas id="circleCountdown" width="120" height="120"></canvas>
-  <span id="countNumber">3</span>
-  <p class="small" style="margin-top:16px;">正在加载...</p>
 </div>
 
 <div class="container hidden" id="app">
@@ -163,63 +136,17 @@ function unlock(){
  const pinStored = localStorage.getItem(PIN_KEY);
  if(!pinStored){
    localStorage.setItem(PIN_KEY,v);
-   startLoading();
+   openApp();
  } else if(v===pinStored){
-   startLoading();
+   openApp();
  } else document.getElementById("pinHint").innerText="PIN 错误";
 }
 
-// 圆环倒计时
-function startLoading(){
-  document.getElementById("lock").classList.add("hidden");
-  const loading = document.getElementById("loading");
-  loading.classList.remove("hidden");
-
-  const canvas = document.getElementById("circleCountdown");
-  const ctx = canvas.getContext("2d");
-  const numberSpan = document.getElementById("countNumber");
-
-  let totalTime = 3; // 秒
-  let start = null;
-
-  function drawCircle(progress){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    const center = canvas.width/2;
-    const radius = center - 8;
-    ctx.lineWidth = 8;
-    // 背景圆
-    ctx.beginPath();
-    ctx.strokeStyle = '#334155';
-    ctx.arc(center, center, radius, 0, 2*Math.PI);
-    ctx.stroke();
-    // 前景圆
-    ctx.beginPath();
-    ctx.strokeStyle = '#38bdf8';
-    ctx.arc(center, center, radius, -Math.PI/2, -Math.PI/2 + 2*Math.PI*progress);
-    ctx.stroke();
-  }
-
-  function step(timestamp){
-    if(!start) start = timestamp;
-    const elapsed = (timestamp - start)/1000; // 秒
-    let progress = Math.max(0, 1 - elapsed/totalTime);
-    drawCircle(progress);
-    let remaining = Math.ceil(totalTime - elapsed);
-    numberSpan.innerText = remaining>0 ? remaining : 0;
-    if(elapsed < totalTime){
-      requestAnimationFrame(step);
-    } else {
-      loading.classList.add("hidden");
-      openApp();
-    }
-  }
-  requestAnimationFrame(step);
-}
-
 function openApp(){
-  document.getElementById("app").classList.remove("hidden");
-  renderAssets();
-  updateTotals();
+ document.getElementById("lock").style.display="none";
+ document.getElementById("app").classList.remove("hidden");
+ renderAssets();
+ updateTotals();
 }
 
 // ------------------ 资产逻辑 ------------------
@@ -300,7 +227,7 @@ function renderChart(){
   const groupData = [
     assets.filter(a=>["支付宝","云闪付","美元外汇"].includes(a.name)).reduce((sum,a)=>sum+a.value,0),
     assets.filter(a=>["平安证券","东方财富"].includes(a.name)).reduce((sum,a)=>sum+a.value,0),
-    assets.filter(a=>["公积金"].includes(a.name)).reduce((sum,a=>sum+a.value,0),
+    assets.filter(a=>["公积金"].includes(a.name)).reduce((sum,a)=>sum+a.value,0),
     assets.filter(a=>["公司股票"].includes(a.name)).reduce((sum,a)=>sum+a.value,0)
   ];
   const total = groupData.reduce((a,b)=>a+b,0);
