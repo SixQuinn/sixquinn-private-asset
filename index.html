@@ -9,168 +9,97 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <style>
-:root{
-  --bg:#0f172a;
-  --card:#020617;
-  --border:#334155;
-  --text:#e5e7eb;
-  --muted:#94a3b8;
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding-top: env(safe-area-inset-top);
+  font-size: 18px;
+  line-height: 1.55;
 }
 
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
-  background:var(--bg);
-  color:var(--text);
-  font-size:18px;
+.container {
+  max-width: 420px;
+  margin: auto;
+  padding: 18px 16px 44px;
 }
 
-.hidden{display:none}
+h1 { font-size: 24px; margin-bottom: 14px; }
 
-/* ===== 锁屏 ===== */
-#lock{
-  min-height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
+.card { background: #020617; border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+
+.card h2 { font-size: 19px; margin: 0 0 10px; }
+
+.row { display: flex; justify-content: space-between; align-items: center; font-size: 16px; margin: 8px 0; }
+
+input {
+  width: 120px;
+  background: #020617;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #e5e7eb;
+  padding: 8px 10px;
+  font-size: 17px;
+  margin-bottom: 12px;
 }
 
-.lock-card{
-  background:var(--card);
-  padding:24px;
-  border-radius:16px;
-  width:90%;
-  max-width:360px;
-  text-align:center;
+button {
+  background: #1e293b;
+  border: none;
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 15px;
+  cursor: pointer;
 }
 
-.lock-card h2{
-  font-size:22px;
-  margin-bottom:16px;
-}
+button:active { opacity: 0.7; }
 
-.lock-card input{
-  width:100%;
-  font-size:18px;
-  padding:10px;
-  border-radius:10px;
-  border:1px solid var(--border);
-  background:#020617;
-  color:var(--text);
-  margin-bottom:12px;
-}
+.progress { background: #020617; border-radius: 8px; overflow: hidden; height: 12px; margin: 10px 0; }
+.progress-inner { height: 100%; background: linear-gradient(90deg, #38bdf8, #22c55e); }
 
-.lock-card button{
-  width:100%;
-  font-size:16px;
-  padding:10px;
-  border:none;
-  border-radius:10px;
-  background:#1e293b;
-  color:var(--text);
-}
+.small { font-size: 14px; color: #94a3b8; }
 
-/* ===== 主体 ===== */
-.container{
-  max-width:420px;
-  margin:auto;
-  padding:20px 16px 48px;
-}
+#lock{ position:fixed; inset:0; background:#0f172a; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:999; }
+.hidden { display:none; }
 
-h1{
-  font-size:24px;
-  margin-bottom:16px;
-}
-
-.card{
-  background:var(--card);
-  border-radius:16px;
-  padding:16px;
-  margin-bottom:16px;
-}
-
-.card h2{
-  font-size:20px;
-  margin-bottom:12px;
-}
-
-/* 总资产 */
-.total{
-  font-size:28px;
-  font-weight:600;
-  margin-bottom:8px;
-}
-
-.small{
-  font-size:14px;
-  color:var(--muted);
-}
-
-/* 行 */
-.row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin:10px 0;
-  font-size:18px;
-}
-
-.row input{
-  width:120px;
-  font-size:16px;
-  padding:6px 8px;
-  background:#020617;
-  border:1px solid var(--border);
-  border-radius:8px;
-  color:var(--text);
-}
-
-button{
-  background:#1e293b;
-  border:none;
-  color:var(--text);
-  border-radius:8px;
-  padding:6px 10px;
-  cursor:pointer;
-}
-
-.tag-btn{
-  font-size:14px;
-  margin-left:6px;
-}
-
-canvas{
-  background:#020617;
-  border-radius:16px;
-  margin-top:12px;
-}
+canvas { background: #020617; border-radius: 14px; margin-top: 16px; padding: 10px; }
 </style>
 </head>
 
 <body>
 
 <div id="lock">
-  <div class="lock-card">
-    <h2>🔒 Six Quinn 的私人资产工具</h2>
-    <input id="pin" type="password" placeholder="输入 PIN">
-    <button onclick="unlock()">解锁</button>
-  </div>
+  <h2>🔒 Six Quinn 的私人资产工具</h2>
+  <p class="small">Local · Private · Long-term</p>
+  <input id="pin" type="password" placeholder="输入 PIN">
+  <button onclick="unlock()">解锁</button>
+  <div id="pinHint" class="small"></div>
 </div>
 
-<div id="app" class="container hidden">
+<div class="container hidden" id="app">
   <h1>📊 Six Quinn 的私人资产工具</h1>
-
-  <div class="card">
-    <div class="total" id="totalAsset">￥0</div>
-    <div class="small">总资产（不含公积金 & 公司股票）</div>
-  </div>
 
   <div class="card">
     <h2>💰 资产结构</h2>
     <div id="assets"></div>
     <button onclick="addCustomAsset()">＋ 新增自定义资产</button>
-    <button class="tag-btn" onclick="toggleChartMode()">📊 切换视图</button>
     <canvas id="assetChart" width="350" height="350"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>🔋 总资产</h2>
+    <div class="row"><span>总资产（全部）</span><strong id="totalAll">0.00</strong></div>
+    <div class="row"><span>总资产（不含公积金 & 公司股票）</span><strong id="totalNoFundStock">0.00</strong></div>
+    <div id="level"></div>
+    <div class="progress"><div id="levelBar" class="progress-inner"></div></div>
+    <div class="small" id="levelGap"></div>
+  </div>
+
+  <div class="card">
+    <h2>📉 被裁风险（无收入生存期）</h2>
+    <div id="risk"></div>
   </div>
 
   <div class="card">
@@ -182,8 +111,6 @@ canvas{
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const PIN_KEY="SQ_PIN";
-let chartMode="group";
-let assetChart;
 
 const FIXED_ASSETS=[
  {name:"支付宝",value:0,fixed:true},
@@ -195,29 +122,46 @@ const FIXED_ASSETS=[
  {name:"公司股票",value:0,fixed:true}
 ];
 
-let assets=JSON.parse(localStorage.getItem("assets"))||FIXED_ASSETS.slice();
+let assets=JSON.parse(localStorage.getItem("assets"));
+if(!assets){
+ assets=FIXED_ASSETS.slice();
+ localStorage.setItem("assets",JSON.stringify(assets));
+}
+
+let assetChart;
 
 function unlock(){
- const v=pin.value;
- if(!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY,v);
- if(v===localStorage.getItem(PIN_KEY)){
-   lock.classList.add("hidden");
-   app.classList.remove("hidden");
-   renderAll();
- }
+ const v=document.getElementById("pin").value;
+ if(!localStorage.getItem(PIN_KEY)){
+   localStorage.setItem(PIN_KEY,v); openApp();
+ }else if(v===localStorage.getItem(PIN_KEY)){
+   openApp();
+ }else document.getElementById("pinHint").innerText="PIN 错误";
+}
+
+function openApp(){
+ document.getElementById("lock").style.display="none";
+ document.getElementById("app").classList.remove("hidden");
+ renderAssets();
+ updateTotals();
 }
 
 function save(){
  localStorage.setItem("assets",JSON.stringify(assets));
- renderAll();
+ updateTotals();
 }
 
 function addCustomAsset(){
- const name=prompt("资产名称");
- if(name){
-   assets.push({name:name.trim(),value:0,fixed:false,countInStock:false});
-   save();
- }
+ assets.push({name:"自定义资产",value:0,fixed:false});
+ save();
+ renderAssets();
+}
+
+function removeAsset(i){
+ if(assets[i].fixed === true) return;
+ assets.splice(i,1);
+ save();
+ renderAssets();
 }
 
 function setVal(i,v){
@@ -226,65 +170,110 @@ function setVal(i,v){
 }
 
 function renderAssets(){
- assetsDiv.innerHTML=assets.map((a,i)=>`
-  <div class="row">
-    <span>${a.name}</span>
-    <input type="number" value="${a.value}" oninput="setVal(${i},this.value)">
-  </div>
- `).join("");
+  let html="";
+  assets.forEach((a,i)=>{
+    html+=`<div class="row">
+      <span>${a.name} ${a.fixed?"":"💡"}</span>
+      <span>
+        <input type="number" step="0.01" value="${Number(a.value).toFixed(2)}"
+          oninput="setVal(${i},this.value)">
+        ${a.fixed?"":"<button onclick='removeAsset(${i})'>－</button>"}
+      </span>
+    </div>`;
+  });
+  document.getElementById("assets").innerHTML = html;
 }
 
-function renderTotal(){
- const total=assets
-   .filter(a=>!["公积金","公司股票"].includes(a.name))
-   .reduce((s,a)=>s+a.value,0);
- totalAsset.innerText="￥"+total.toLocaleString();
-}
+function updateTotals(){
+  let totalAll=0, fund=0, stock=0;
+  assets.forEach(a=>{
+    totalAll += a.value||0;
+    if(a.name==="公积金") fund += a.value||0;
+    if(a.name==="公司股票") stock += a.value||0;
+  });
 
-function renderAdvice(){
- const total=assets.reduce((s,a)=>s+a.value,0);
- const stock=assets
-   .filter(a=>["平安证券","东方财富"].includes(a.name))
-   .reduce((s,a)=>s+a.value,0);
+  const totalNoFundStock = totalAll - fund - stock;
 
- let advice="结构稳健。";
- if(total){
-   const p=stock/total;
-   if(p>0.5) advice="股票占比过高，风险暴露明显。";
-   else if(p>0.3) advice="股票占比较高，需关注波动。";
- }
- adviceDiv.innerText=advice;
-}
+  document.getElementById("totalAll").innerText = totalAll.toFixed(2);
+  document.getElementById("totalNoFundStock").innerText = totalNoFundStock.toFixed(2);
 
-function toggleChartMode(){
- chartMode=chartMode==="group"?"detail":"group";
- renderChart();
+  const riskYears = totalNoFundStock / 199000;
+  const years = Math.floor(riskYears);
+  const months = Math.floor((riskYears - years)*12);
+  document.getElementById("risk").innerText = `可支撑 ${years} 年 ${months} 个月无收入生存`;
+
+  const levels = [
+    {level:"A4",amount:1e3},{level:"A5",amount:1e4},{level:"A6",amount:1e5},{level:"A6.5",amount:5e5},
+    {level:"A7",amount:1e6},{level:"A7.5",amount:5e6},{level:"A8",amount:1e7},{level:"A8.5",amount:5e7},
+    {level:"A9",amount:1e8},{level:"A10",amount:1e9},{level:"A11",amount:1e10}
+  ];
+  let currentLevel = levels[0].level;
+  for(let i=levels.length-1;i>=0;i--){
+    if(totalAll >= levels[i].amount){
+      currentLevel = levels[i].level;
+      break;
+    }
+  }
+  document.getElementById("level").innerText = `等级：${currentLevel}`;
+  document.getElementById("levelBar").style.width = Math.min(totalAll/1e10*100,100)+"%";
+  const nextLevel = levels.find(l=>l.level!==currentLevel && totalAll < l.amount);
+  document.getElementById("levelGap").innerText = nextLevel ? `距下一级：${(nextLevel.amount-totalAll).toFixed(2)}` : "";
+
+  let advice="结构稳健。";
+  const stockValue = assets.filter(a=>["平安证券","东方财富"].includes(a.name)).reduce((sum,a)=>sum+a.value,0);
+  if(totalAll>0){
+    const stockPct = stockValue/totalAll;
+    if(stockPct>=0.5) advice="股票类资产占比超过 50%，结构波动性很高，需高度警惕市场回撤风险。";
+    else if(stockPct>=0.3) advice="股票类资产占比超过 30%，已明显受股市影响，建议关注回撤与分散配置。";
+    else if(stockPct>=0.2) advice="股票类资产占比超过 20%，需开始留意市场波动对整体资产的影响。";
+  }
+  document.getElementById("advice").innerText = advice;
+
+  renderChart();
 }
 
 function renderChart(){
- if(assetChart) assetChart.destroy();
- let labels=[],data=[];
- assets.forEach(a=>{
-   if(a.value>0){labels.push(a.name);data.push(a.value);}
- });
- assetChart=new Chart(assetChartEl,{
-   type:"pie",
-   data:{labels,datasets:[{data}]},
-   options:{plugins:{legend:{position:"bottom",labels:{color:"#e5e7eb"}}}}
- });
-}
+  const cash = assets.filter(a=>["支付宝","云闪付","美元外汇"].includes(a.name)).reduce((s,a)=>s+a.value,0);
+  const securities = assets.filter(a=>["平安证券","东方财富"].includes(a.name)).reduce((s,a)=>s+a.value,0);
+  const fund = assets.filter(a=>a.name==="公积金").reduce((s,a)=>s+a.value,0);
+  const companyStock = assets.filter(a=>a.name==="公司股票").reduce((s,a)=>s+a.value,0);
+  const custom = assets.filter(a=>a.fixed !== true).reduce((s,a)=>s+a.value,0);
 
-function renderAll(){
- renderTotal();
- renderAssets();
- renderAdvice();
- renderChart();
-}
+  const labels = ["支付宝、云闪付、美元外汇","平安证券、东方财富","公积金","公司股票"];
+  const data = [cash,securities,fund,companyStock];
 
-const assetsDiv=document.getElementById("assets");
-const adviceDiv=document.getElementById("advice");
-const assetChartEl=document.getElementById("assetChart");
-const totalAsset=document.getElementById("totalAsset");
+  if(custom>0){
+    labels.push("自定义资产");
+    data.push(custom);
+  }
+
+  const ctx = document.getElementById("assetChart").getContext("2d");
+  if(assetChart) assetChart.destroy();
+  assetChart = new Chart(ctx,{
+    type:"pie",
+    data:{
+      labels,
+      datasets:[{
+        data,
+        backgroundColor:["#38bdf8","#22c55e","#facc15","#f87171","#a78bfa"]
+      }]
+    },
+    options:{
+      plugins:{
+        legend:{position:"bottom",labels:{color:"#e5e7eb"}},
+        tooltip:{
+          callbacks:{
+            label:function(context){
+              const total = context.dataset.data.reduce((a,b)=>a+b,0);
+              const pct = total ? (context.raw/total*100).toFixed(1) : 0;
+              return `${context.label}: ${context.raw.toFixed(2)}（${pct}%）`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
 </script>
 </body>
 </html>
