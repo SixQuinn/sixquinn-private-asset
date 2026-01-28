@@ -152,13 +152,20 @@ function save(){
 }
 
 function addCustomAsset(){
- assets.push({name:"自定义资产",value:0,fixed:false});
- save();
- renderAssets();
+  const name = prompt("请输入资产名称");
+  if(!name) return;
+
+  assets.push({
+    name: name.trim(),
+    value: 0,
+    fixed: false
+  });
+  save();
+  renderAssets();
 }
 
 function removeAsset(i){
- if(assets[i].fixed === true) return;
+ if(assets[i].fixed) return;   // 只要是 fixed=true 才禁止删除
  assets.splice(i,1);
  save();
  renderAssets();
