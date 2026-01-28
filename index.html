@@ -165,10 +165,11 @@ function addCustomAsset(){
 }
 
 function removeAsset(i){
- if(assets[i].fixed) return;   // 只要是 fixed=true 才禁止删除
- assets.splice(i,1);
- save();
- renderAssets();
+  const asset = assets[i];
+  if(asset.fixed) return;  // 固定资产不能删
+  assets = assets.filter(a => a !== asset);  // 用对象过滤，保证删除的是正确资产
+  save();
+  renderAssets();
 }
 
 function setVal(i,v){
