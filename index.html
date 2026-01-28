@@ -9,71 +9,167 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-  background: #0f172a;
-  color: #e5e7eb;
-  padding-top: env(safe-area-inset-top);
-  font-size: 18px;
+:root{
+  --bg:#0f172a;
+  --card:#020617;
+  --border:#334155;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
 }
 
-.container { max-width: 420px; margin: auto; padding: 18px 16px 44px; }
-h1 { font-size: 24px; margin-bottom: 14px; }
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  font-size:18px;
+}
 
-.card { background: #020617; border-radius: 14px; padding: 16px; margin-bottom: 16px; }
-.card h2 { font-size: 19px; margin-bottom: 10px; }
+.hidden{display:none}
 
-.row {
+/* ===== 锁屏 ===== */
+#lock{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.lock-card{
+  background:var(--card);
+  padding:24px;
+  border-radius:16px;
+  width:90%;
+  max-width:360px;
+  text-align:center;
+}
+
+.lock-card h2{
+  font-size:22px;
+  margin-bottom:16px;
+}
+
+.lock-card input{
+  width:100%;
+  font-size:18px;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#020617;
+  color:var(--text);
+  margin-bottom:12px;
+}
+
+.lock-card button{
+  width:100%;
+  font-size:16px;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:#1e293b;
+  color:var(--text);
+}
+
+/* ===== 主体 ===== */
+.container{
+  max-width:420px;
+  margin:auto;
+  padding:20px 16px 48px;
+}
+
+h1{
+  font-size:24px;
+  margin-bottom:16px;
+}
+
+.card{
+  background:var(--card);
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:16px;
+}
+
+.card h2{
+  font-size:20px;
+  margin-bottom:12px;
+}
+
+/* 总资产 */
+.total{
+  font-size:28px;
+  font-weight:600;
+  margin-bottom:8px;
+}
+
+.small{
+  font-size:14px;
+  color:var(--muted);
+}
+
+/* 行 */
+.row{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  font-size:16px;
-  margin:8px 0;
+  margin:10px 0;
+  font-size:18px;
 }
 
-input {
+.row input{
   width:120px;
+  font-size:16px;
+  padding:6px 8px;
   background:#020617;
-  border:1px solid #334155;
+  border:1px solid var(--border);
   border-radius:8px;
-  color:#e5e7eb;
-  padding:8px 10px;
+  color:var(--text);
 }
 
-button {
+button{
   background:#1e293b;
   border:none;
-  color:#e5e7eb;
+  color:var(--text);
   border-radius:8px;
   padding:6px 10px;
   cursor:pointer;
 }
 
-.small { font-size:14px; color:#94a3b8; }
-.hidden { display:none; }
-canvas { background:#020617; border-radius:14px; margin-top:12px; }
+.tag-btn{
+  font-size:14px;
+  margin-left:6px;
+}
 
-.tag-btn { margin-left:6px; font-size:14px; }
+canvas{
+  background:#020617;
+  border-radius:16px;
+  margin-top:12px;
+}
 </style>
 </head>
 
 <body>
 
 <div id="lock">
-  <h2>🔒 Six Quinn 的私人资产工具</h2>
-  <input id="pin" type="password" placeholder="输入 PIN">
-  <button onclick="unlock()">解锁</button>
+  <div class="lock-card">
+    <h2>🔒 Six Quinn 的私人资产工具</h2>
+    <input id="pin" type="password" placeholder="输入 PIN">
+    <button onclick="unlock()">解锁</button>
+  </div>
 </div>
 
-<div class="container hidden" id="app">
+<div id="app" class="container hidden">
   <h1>📊 Six Quinn 的私人资产工具</h1>
+
+  <div class="card">
+    <div class="total" id="totalAsset">￥0</div>
+    <div class="small">总资产（不含公积金 & 公司股票）</div>
+  </div>
 
   <div class="card">
     <h2>💰 资产结构</h2>
     <div id="assets"></div>
     <button onclick="addCustomAsset()">＋ 新增自定义资产</button>
-    <button onclick="toggleChartMode()" class="tag-btn">📊 切换视图</button>
+    <button class="tag-btn" onclick="toggleChartMode()">📊 切换视图</button>
     <canvas id="assetChart" width="350" height="350"></canvas>
   </div>
 
@@ -86,7 +182,7 @@ canvas { background:#020617; border-radius:14px; margin-top:12px; }
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const PIN_KEY="SQ_PIN";
-let chartMode="group"; // group | detail
+let chartMode="group";
 let assetChart;
 
 const FIXED_ASSETS=[
@@ -99,25 +195,13 @@ const FIXED_ASSETS=[
  {name:"公司股票",value:0,fixed:true}
 ];
 
-let assets=JSON.parse(localStorage.getItem("assets"));
-if(!assets){
- assets=FIXED_ASSETS.slice();
-}else{
- // 向下兼容老自定义资产
- assets.forEach(a=>{
-   if(a.fixed===false && a.countInStock===undefined){
-     a.countInStock=false;
-   }
- });
-}
+let assets=JSON.parse(localStorage.getItem("assets"))||FIXED_ASSETS.slice();
 
 function unlock(){
  const v=pin.value;
- if(!localStorage.getItem(PIN_KEY)){
-   localStorage.setItem(PIN_KEY,v);
- }
+ if(!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY,v);
  if(v===localStorage.getItem(PIN_KEY)){
-   lock.style.display="none";
+   lock.classList.add("hidden");
    app.classList.remove("hidden");
    renderAll();
  }
@@ -129,24 +213,11 @@ function save(){
 }
 
 function addCustomAsset(){
- const name=prompt("请输入资产名称");
- if(!name) return;
- assets.push({name:name.trim(),value:0,fixed:false,countInStock:false});
- save();
-}
-
-function renameAsset(i){
- const name=prompt("修改资产名称",assets[i].name);
- if(name){ assets[i].name=name.trim(); save(); }
-}
-
-function toggleStockFlag(i){
- assets[i].countInStock=!assets[i].countInStock;
- save();
-}
-
-function removeAsset(i){
- if(!assets[i].fixed){ assets.splice(i,1); save(); }
+ const name=prompt("资产名称");
+ if(name){
+   assets.push({name:name.trim(),value:0,fixed:false,countInStock:false});
+   save();
+ }
 }
 
 function setVal(i,v){
@@ -155,68 +226,48 @@ function setVal(i,v){
 }
 
 function renderAssets(){
- let html="";
- assets.forEach((a,i)=>{
-  html+=`<div class="row">
-    <span ondblclick="${a.fixed?"":`renameAsset(${i})`}">
-      ${a.name}${a.fixed?"":" ✏️"}
-      ${!a.fixed?`<button class="tag-btn" onclick="toggleStockFlag(${i})">${a.countInStock?"📈":"💤"}</button>`:""}
-    </span>
-    <span>
-      <input type="number" value="${a.value}" oninput="setVal(${i},this.value)">
-      ${a.fixed?"":`<button onclick="removeAsset(${i})">－</button>`}
-    </span>
-  </div>`;
- });
- assetsDiv.innerHTML=html;
+ assetsDiv.innerHTML=assets.map((a,i)=>`
+  <div class="row">
+    <span>${a.name}</span>
+    <input type="number" value="${a.value}" oninput="setVal(${i},this.value)">
+  </div>
+ `).join("");
+}
+
+function renderTotal(){
+ const total=assets
+   .filter(a=>!["公积金","公司股票"].includes(a.name))
+   .reduce((s,a)=>s+a.value,0);
+ totalAsset.innerText="￥"+total.toLocaleString();
 }
 
 function renderAdvice(){
- let total=assets.reduce((s,a)=>s+a.value,0);
- let stock=assets.filter(a=>
-   ["平安证券","东方财富"].includes(a.name) ||
-   (a.countInStock)
- ).reduce((s,a)=>s+a.value,0);
+ const total=assets.reduce((s,a)=>s+a.value,0);
+ const stock=assets
+   .filter(a=>["平安证券","东方财富"].includes(a.name))
+   .reduce((s,a)=>s+a.value,0);
 
  let advice="结构稳健。";
- if(total>0){
-  const p=stock/total;
-  if(p>=0.5) advice="股票类资产占比 >50%，风险暴露极高，需严肃对待回撤。";
-  else if(p>=0.3) advice="股票类资产占比 >30%，资产波动性明显。";
-  else if(p>=0.2) advice="股票类资产占比 >20%，建议关注市场周期。";
+ if(total){
+   const p=stock/total;
+   if(p>0.5) advice="股票占比过高，风险暴露明显。";
+   else if(p>0.3) advice="股票占比较高，需关注波动。";
  }
  adviceDiv.innerText=advice;
 }
 
 function toggleChartMode(){
- chartMode = chartMode==="group"?"detail":"group";
+ chartMode=chartMode==="group"?"detail":"group";
  renderChart();
 }
 
 function renderChart(){
  if(assetChart) assetChart.destroy();
  let labels=[],data=[];
- if(chartMode==="group"){
-   const map={
-     "现金":[ "支付宝","云闪付","美元外汇" ],
-     "证券":[ "平安证券","东方财富" ],
-     "公积金":[ "公积金" ],
-     "公司股票":[ "公司股票" ],
-     "自定义资产":[]
-   };
-   assets.forEach(a=>{
-     if(!a.fixed) map["自定义资产"].push(a.name);
-   });
-   Object.keys(map).forEach(k=>{
-     const sum=assets.filter(a=>map[k].includes(a.name)).reduce((s,a)=>s+a.value,0);
-     if(sum>0){ labels.push(k); data.push(sum); }
-   });
- }else{
-   assets.forEach(a=>{
-     if(a.value>0){ labels.push(a.name); data.push(a.value); }
-   });
- }
- assetChart=new Chart(assetChartEl.getContext("2d"),{
+ assets.forEach(a=>{
+   if(a.value>0){labels.push(a.name);data.push(a.value);}
+ });
+ assetChart=new Chart(assetChartEl,{
    type:"pie",
    data:{labels,datasets:[{data}]},
    options:{plugins:{legend:{position:"bottom",labels:{color:"#e5e7eb"}}}}
@@ -224,6 +275,7 @@ function renderChart(){
 }
 
 function renderAll(){
+ renderTotal();
  renderAssets();
  renderAdvice();
  renderChart();
@@ -232,6 +284,7 @@ function renderAll(){
 const assetsDiv=document.getElementById("assets");
 const adviceDiv=document.getElementById("advice");
 const assetChartEl=document.getElementById("assetChart");
+const totalAsset=document.getElementById("totalAsset");
 </script>
 </body>
 </html>
