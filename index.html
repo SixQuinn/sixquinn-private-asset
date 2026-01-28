@@ -113,13 +113,13 @@ canvas { background: #020617; border-radius: 14px; margin-top: 16px; padding: 10
 const PIN_KEY="SQ_PIN";
 
 const FIXED_ASSETS=[
- {name:"支付宝",value:0,fixed:true},
- {name:"云闪付",value:0,fixed:true},
- {name:"美元外汇",value:0,fixed:true},
- {name:"平安证券",value:0,fixed:true},
- {name:"东方财富",value:0,fixed:true},
- {name:"公积金",value:0,fixed:true},
- {name:"公司股票",value:0,fixed:true}
+ {id:1,name:"支付宝",value:0,fixed:true},
+ {id:2,name:"云闪付",value:0,fixed:true},
+ {id:3,name:"美元外汇",value:0,fixed:true},
+ {id:4,name:"平安证券",value:0,fixed:true},
+ {id:5,name:"东方财富",value:0,fixed:true},
+ {id:6,name:"公积金",value:0,fixed:true},
+ {id:7,name:"公司股票",value:0,fixed:true}
 ];
 
 let assets=JSON.parse(localStorage.getItem("assets"));
@@ -156,6 +156,7 @@ function addCustomAsset(){
   if(!name) return;
 
   assets.push({
+    id: Date.now() + Math.random(),
     name: name.trim(),
     value: 0,
     fixed: false
@@ -164,28 +165,30 @@ function addCustomAsset(){
   renderAssets();
 }
 
-function removeAsset(i){
-  const asset = assets[i];
-  if(asset.fixed) return;  // 固定资产不能删
-  assets = assets.filter(a => a !== asset);  // 用对象过滤，保证删除的是正确资产
+function removeAssetById(id){
+  const asset = assets.find(a=>a.id===id);
+  if(!asset || asset.fixed) return;
+  assets = assets.filter(a=>a.id!==id);
   save();
   renderAssets();
 }
 
-function setVal(i,v){
- assets[i].value=parseFloat(v)||0;
- save();
+function setValById(id,v){
+  const asset = assets.find(a=>a.id===id);
+  if(!asset) return;
+  asset.value = parseFloat(v)||0;
+  save();
 }
 
 function renderAssets(){
   let html="";
-  assets.forEach((a,i)=>{
+  assets.forEach(a=>{
     html+=`<div class="row">
       <span>${a.name} ${a.fixed?"":"💡"}</span>
       <span>
         <input type="number" step="0.01" value="${Number(a.value).toFixed(2)}"
-          oninput="setVal(${i},this.value)">
-        ${a.fixed?"":"<button onclick='removeAsset(${i})'>－</button>"}
+          oninput="setValById(${a.id},this.value)">
+        ${a.fixed?"":`<button onclick="removeAssetById(${a.id})">－</button>`}
       </span>
     </div>`;
   });
@@ -245,7 +248,7 @@ function renderChart(){
   const securities = assets.filter(a=>["平安证券","东方财富"].includes(a.name)).reduce((s,a)=>s+a.value,0);
   const fund = assets.filter(a=>a.name==="公积金").reduce((s,a)=>s+a.value,0);
   const companyStock = assets.filter(a=>a.name==="公司股票").reduce((s,a)=>s+a.value,0);
-  const custom = assets.filter(a=>a.fixed !== true).reduce((s,a)=>s+a.value,0);
+  const custom = assets.filter(a=>!a.fixed).reduce((s,a)=>s+a.value,0);
 
   const labels = ["支付宝、云闪付、美元外汇","平安证券、东方财富","公积金","公司股票"];
   const data = [cash,securities,fund,companyStock];
