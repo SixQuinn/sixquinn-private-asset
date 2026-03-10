@@ -61,10 +61,25 @@ button:active { opacity: 0.7; }
 
 .small { font-size: 14px; color: #94a3b8; }
 
-#lock{ position:fixed; inset:0; background:#0f172a; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:999; }
+#lock{
+  position:fixed;
+  inset:0;
+  background:#0f172a;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+
 .hidden { display:none; }
 
-canvas { background: #020617; border-radius: 14px; margin-top: 16px; padding: 10px; }
+canvas {
+  background: #020617;
+  border-radius: 14px;
+  margin-top: 16px;
+  padding: 10px;
+}
 </style>
 </head>
 
@@ -100,6 +115,7 @@ canvas { background: #020617; border-radius: 14px; margin-top: 16px; padding: 10
   <div class="card">
     <h2>📉 被裁风险（无收入生存期）</h2>
     <div id="risk"></div>
+    <div class="small">按年开销 19.9w 估算</div>
   </div>
 
   <div class="card">
@@ -109,7 +125,9 @@ canvas { background: #020617; border-radius: 14px; margin-top: 16px; padding: 10
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
+
 const PIN_KEY="SQ_PIN";
 
 const FIXED_ASSETS=[
@@ -117,12 +135,12 @@ const FIXED_ASSETS=[
  {id:2,name:"云闪付",value:0,fixed:true},
  {id:3,name:"美元外汇",value:0,fixed:true},
  {id:4,name:"平安证券",value:0,fixed:true},
- {id:5,name:"东方财富",value:0,fixed:true},
  {id:6,name:"公积金",value:0,fixed:true},
  {id:7,name:"公司股票",value:0,fixed:true}
 ];
 
 let assets=JSON.parse(localStorage.getItem("assets"));
+
 if(!assets){
  assets=FIXED_ASSETS.slice();
  localStorage.setItem("assets",JSON.stringify(assets));
@@ -132,16 +150,23 @@ let assetChart;
 
 function unlock(){
  const v=document.getElementById("pin").value;
+
  if(!localStorage.getItem(PIN_KEY)){
-   localStorage.setItem(PIN_KEY,v); openApp();
- }else if(v===localStorage.getItem(PIN_KEY)){
+   localStorage.setItem(PIN_KEY,v);
    openApp();
- }else document.getElementById("pinHint").innerText="PIN 错误";
+ }
+ else if(v===localStorage.getItem(PIN_KEY)){
+   openApp();
+ }
+ else{
+   document.getElementById("pinHint").innerText="PIN 错误";
+ }
 }
 
 function openApp(){
  document.getElementById("lock").style.display="none";
  document.getElementById("app").classList.remove("hidden");
+
  renderAssets();
  updateTotals();
 }
@@ -152,139 +177,225 @@ function save(){
 }
 
 function addCustomAsset(){
-  const name = prompt("请输入资产名称");
-  if(!name) return;
 
-  assets.push({
-    id: Date.now() + Math.random(),
-    name: name.trim(),
-    value: 0,
-    fixed: false
-  });
-  save();
-  renderAssets();
+ const name = prompt("请输入资产名称");
+
+ if(!name) return;
+
+ assets.push({
+   id: Date.now()+Math.random(),
+   name:name.trim(),
+   value:0,
+   fixed:false
+ });
+
+ save();
+ renderAssets();
 }
 
 function removeAssetById(id){
-  const asset = assets.find(a=>a.id===id);
-  if(!asset || asset.fixed) return;
-  assets = assets.filter(a=>a.id!==id);
-  save();
-  renderAssets();
+
+ const asset = assets.find(a=>a.id===id);
+
+ if(!asset || asset.fixed) return;
+
+ assets = assets.filter(a=>a.id!==id);
+
+ save();
+ renderAssets();
 }
 
 function setValById(id,v){
-  const asset = assets.find(a=>a.id===id);
-  if(!asset) return;
-  asset.value = parseFloat(v)||0;
-  save();
+
+ const asset = assets.find(a=>a.id===id);
+
+ if(!asset) return;
+
+ asset.value = parseFloat(v)||0;
+
+ save();
 }
 
 function renderAssets(){
-  let html="";
-  assets.forEach(a=>{
-    html+=`<div class="row">
-      <span>${a.name} ${a.fixed?"":"💡"}</span>
-      <span>
-        <input type="number" step="0.01" value="${Number(a.value).toFixed(2)}"
-          oninput="setValById(${a.id},this.value)">
-        ${a.fixed?"":`<button onclick="removeAssetById(${a.id})">－</button>`}
-      </span>
-    </div>`;
-  });
-  document.getElementById("assets").innerHTML = html;
+
+ let html="";
+
+ assets.forEach(a=>{
+
+   html+=`
+   <div class="row">
+     <span>${a.name} ${a.fixed?"":"💡"}</span>
+     <span>
+       <input type="number" step="0.01" value="${Number(a.value).toFixed(2)}"
+         oninput="setValById(${a.id},this.value)">
+       ${a.fixed?"":`<button onclick="removeAssetById(${a.id})">－</button>`}
+     </span>
+   </div>
+   `;
+ });
+
+ document.getElementById("assets").innerHTML = html;
 }
 
 function updateTotals(){
-  let totalAll=0, fund=0, stock=0;
-  assets.forEach(a=>{
-    totalAll += a.value||0;
-    if(a.name==="公积金") fund += a.value||0;
-    if(a.name==="公司股票") stock += a.value||0;
-  });
 
-  const totalNoFundStock = totalAll - fund - stock;
+ let totalAll=0;
+ let fund=0;
+ let stock=0;
 
-  document.getElementById("totalAll").innerText = totalAll.toFixed(2);
-  document.getElementById("totalNoFundStock").innerText = totalNoFundStock.toFixed(2);
+ assets.forEach(a=>{
 
-  const riskYears = totalNoFundStock / 199000;
-  const years = Math.floor(riskYears);
-  const months = Math.floor((riskYears - years)*12);
-  document.getElementById("risk").innerText = `可支撑 ${years} 年 ${months} 个月无收入生存`;
+   totalAll += a.value||0;
 
-  const levels = [
-    {level:"A4",amount:1e3},{level:"A5",amount:1e4},{level:"A6",amount:1e5},{level:"A6.5",amount:5e5},
-    {level:"A7",amount:1e6},{level:"A7.5",amount:5e6},{level:"A8",amount:1e7},{level:"A8.5",amount:5e7},
-    {level:"A9",amount:1e8},{level:"A10",amount:1e9},{level:"A11",amount:1e10}
-  ];
-  let currentLevel = levels[0].level;
-  for(let i=levels.length-1;i>=0;i--){
-    if(totalAll >= levels[i].amount){
-      currentLevel = levels[i].level;
-      break;
-    }
-  }
-  document.getElementById("level").innerText = `等级：${currentLevel}`;
-  document.getElementById("levelBar").style.width = Math.min(totalAll/1e10*100,100)+"%";
-  const nextLevel = levels.find(l=>l.level!==currentLevel && totalAll < l.amount);
-  document.getElementById("levelGap").innerText = nextLevel ? `距下一级：${(nextLevel.amount-totalAll).toFixed(2)}` : "";
+   if(a.name==="公积金") fund+=a.value||0;
 
-  let advice="结构稳健。";
-  const stockValue = assets.filter(a=>["平安证券","东方财富"].includes(a.name)).reduce((sum,a)=>sum+a.value,0);
-  if(totalAll>0){
-    const stockPct = stockValue/totalAll;
-    if(stockPct>=0.5) advice="股票类资产占比超过 50%，结构波动性很高，需高度警惕市场回撤风险。";
-    else if(stockPct>=0.3) advice="股票类资产占比超过 30%，已明显受股市影响，建议关注回撤与分散配置。";
-    else if(stockPct>=0.2) advice="股票类资产占比超过 20%，需开始留意市场波动对整体资产的影响。";
-  }
-  document.getElementById("advice").innerText = advice;
+   if(a.name==="公司股票") stock+=a.value||0;
 
-  renderChart();
+ });
+
+ const totalNoFundStock = totalAll - fund - stock;
+
+ document.getElementById("totalAll").innerText = totalAll.toFixed(2);
+
+ document.getElementById("totalNoFundStock").innerText = totalNoFundStock.toFixed(2);
+
+ const riskYears = totalNoFundStock / 199000;
+
+ const years = Math.floor(riskYears);
+
+ const months = Math.floor((riskYears-years)*12);
+
+ document.getElementById("risk").innerText = `可支撑 ${years} 年 ${months} 个月无收入生存`;
+
+ const levels=[
+   {level:"A4",amount:1e3},
+   {level:"A5",amount:1e4},
+   {level:"A6",amount:1e5},
+   {level:"A6.5",amount:5e5},
+   {level:"A7",amount:1e6},
+   {level:"A7.5",amount:5e6},
+   {level:"A8",amount:1e7},
+   {level:"A8.5",amount:5e7},
+   {level:"A9",amount:1e8},
+   {level:"A10",amount:1e9},
+   {level:"A11",amount:1e10}
+ ];
+
+ let currentLevel = levels[0].level;
+
+ for(let i=levels.length-1;i>=0;i--){
+
+   if(totalAll>=levels[i].amount){
+     currentLevel=levels[i].level;
+     break;
+   }
+ }
+
+ document.getElementById("level").innerText=`等级：${currentLevel}`;
+
+ document.getElementById("levelBar").style.width = Math.min(totalAll/1e10*100,100)+"%";
+
+ const nextLevel = levels.find(l=> totalAll < l.amount);
+
+ document.getElementById("levelGap").innerText =
+   nextLevel ? `距下一级：${(nextLevel.amount-totalAll).toFixed(2)}` : "";
+
+ let advice="结构稳健。";
+
+ const stockValue = assets
+   .filter(a=>a.name==="平安证券")
+   .reduce((sum,a)=>sum+a.value,0);
+
+ if(totalAll>0){
+
+   const stockPct = stockValue/totalAll;
+
+   if(stockPct>=0.5)
+     advice="股票类资产占比超过 50%，结构波动性很高，需高度警惕市场回撤风险。";
+   else if(stockPct>=0.3)
+     advice="股票类资产占比超过 30%，已明显受股市影响，建议关注回撤与分散配置。";
+   else if(stockPct>=0.2)
+     advice="股票类资产占比超过 20%，需开始留意市场波动对整体资产的影响。";
+ }
+
+ document.getElementById("advice").innerText=advice;
+
+ renderChart();
 }
 
 function renderChart(){
-  const cash = assets.filter(a=>["支付宝","云闪付","美元外汇"].includes(a.name)).reduce((s,a)=>s+a.value,0);
-  const securities = assets.filter(a=>["平安证券","东方财富"].includes(a.name)).reduce((s,a)=>s+a.value,0);
-  const fund = assets.filter(a=>a.name==="公积金").reduce((s,a)=>s+a.value,0);
-  const companyStock = assets.filter(a=>a.name==="公司股票").reduce((s,a)=>s+a.value,0);
-  const custom = assets.filter(a=>!a.fixed).reduce((s,a)=>s+a.value,0);
 
-  const labels = ["支付宝、云闪付、美元外汇","平安证券、东方财富","公积金","公司股票"];
-  const data = [cash,securities,fund,companyStock];
+ const cash = assets
+   .filter(a=>["支付宝","云闪付","美元外汇"].includes(a.name))
+   .reduce((s,a)=>s+a.value,0);
 
-  if(custom>0){
-    labels.push("自定义资产");
-    data.push(custom);
-  }
+ const securities = assets
+   .filter(a=>a.name==="平安证券")
+   .reduce((s,a)=>s+a.value,0);
 
-  const ctx = document.getElementById("assetChart").getContext("2d");
-  if(assetChart) assetChart.destroy();
-  assetChart = new Chart(ctx,{
-    type:"pie",
-    data:{
-      labels,
-      datasets:[{
-        data,
-        backgroundColor:["#38bdf8","#22c55e","#facc15","#f87171","#a78bfa"]
-      }]
-    },
-    options:{
-      plugins:{
-        legend:{position:"bottom",labels:{color:"#e5e7eb"}},
-        tooltip:{
-          callbacks:{
-            label:function(context){
-              const total = context.dataset.data.reduce((a,b)=>a+b,0);
-              const pct = total ? (context.raw/total*100).toFixed(1) : 0;
-              return `${context.label}: ${context.raw.toFixed(2)}（${pct}%）`;
-            }
-          }
-        }
-      }
-    }
-  });
+ const fund = assets
+   .filter(a=>a.name==="公积金")
+   .reduce((s,a)=>s+a.value,0);
+
+ const companyStock = assets
+   .filter(a=>a.name==="公司股票")
+   .reduce((s,a)=>s+a.value,0);
+
+ const custom = assets
+   .filter(a=>!a.fixed)
+   .reduce((s,a)=>s+a.value,0);
+
+ const labels=[
+   "支付宝、云闪付、美元外汇",
+   "平安证券",
+   "公积金",
+   "公司股票"
+ ];
+
+ const data=[cash,securities,fund,companyStock];
+
+ if(custom>0){
+   labels.push("自定义资产");
+   data.push(custom);
+ }
+
+ const ctx=document.getElementById("assetChart").getContext("2d");
+
+ if(assetChart) assetChart.destroy();
+
+ assetChart = new Chart(ctx,{
+   type:"pie",
+   data:{
+     labels,
+     datasets:[{
+       data,
+       backgroundColor:["#38bdf8","#22c55e","#facc15","#f87171","#a78bfa"]
+     }]
+   },
+   options:{
+     plugins:{
+       legend:{
+         position:"bottom",
+         labels:{color:"#e5e7eb"}
+       },
+       tooltip:{
+         callbacks:{
+           label:function(context){
+
+             const total = context.dataset.data.reduce((a,b)=>a+b,0);
+
+             const pct = total ? (context.raw/total*100).toFixed(1) : 0;
+
+             return `${context.label}: ${context.raw.toFixed(2)}（${pct}%）`;
+           }
+         }
+       }
+     }
+   }
+ });
 }
+
 </script>
+
 </body>
 </html>
